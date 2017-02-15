@@ -158,6 +158,7 @@ public class SolaceController {
 
 		try {
 			session = jcsmpFactory.createSession();
+			session.connect();
 			
 			clientName = (String)session.getProperty(JCSMPProperties.CLIENT_NAME);
 

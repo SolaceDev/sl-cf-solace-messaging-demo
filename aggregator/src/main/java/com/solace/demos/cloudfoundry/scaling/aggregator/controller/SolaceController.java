@@ -72,6 +72,7 @@ public class SolaceController {
 
 		try {
 			session = jcsmpFactory.createSession();
+			session.connect();
 
 			destForPublish = JCSMPFactory.onlyInstance().createQueue("Q/demo/requests");
 
