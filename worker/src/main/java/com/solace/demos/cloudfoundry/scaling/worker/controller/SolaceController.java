@@ -23,33 +23,16 @@ import java.io.IOException;
 
 import javax.annotation.PostConstruct;
 
+import com.solacesystems.jcsmp.*;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.springframework.cloud.Cloud;
-import org.springframework.cloud.CloudFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.solace.demos.cloudfoundry.scaling.worker.model.WorkInstance;
 import com.solace.demos.cloudfoundry.scaling.worker.model.WorkResponse;
-import com.solace.labs.spring.cloud.core.SolaceMessagingInfo;
 import com.solacesystems.common.util.trace.Trace;
-import com.solacesystems.jcsmp.BytesXMLMessage;
-import com.solacesystems.jcsmp.ConsumerFlowProperties;
-import com.solacesystems.jcsmp.DeliveryMode;
-import com.solacesystems.jcsmp.EndpointProperties;
-import com.solacesystems.jcsmp.FlowReceiver;
-import com.solacesystems.jcsmp.JCSMPException;
-import com.solacesystems.jcsmp.JCSMPFactory;
-import com.solacesystems.jcsmp.JCSMPProperties;
-import com.solacesystems.jcsmp.JCSMPSession;
-import com.solacesystems.jcsmp.JCSMPStreamingPublishEventHandler;
-import com.solacesystems.jcsmp.Queue;
-import com.solacesystems.jcsmp.SDTException;
-import com.solacesystems.jcsmp.SDTMap;
-import com.solacesystems.jcsmp.TextMessage;
-import com.solacesystems.jcsmp.XMLMessageListener;
-import com.solacesystems.jcsmp.XMLMessageProducer;
 
 @Component
 public class SolaceController {
@@ -60,11 +43,14 @@ public class SolaceController {
 	private final String MSG_TYPE_HEADER = "MSG_TYPE";
 	private final String REQUEST_MSG_TYPE = "DEMO_REQUEST";
 	private final String RESPONSE_MSG_TYPE = "DEMO_RESPONSE";
-	
+
+	@Autowired
+	private SpringJCSMPFactory jcsmpFactory;
+
 	private XMLMessageProducer producer;
 	JCSMPSession session;
 	private String clientName; 
-	
+
 	class PublisherEventHandler implements JCSMPStreamingPublishEventHandler {
 		@Override
 		public void responseReceived(String messageID) {
@@ -169,31 +155,9 @@ public class SolaceController {
 	public void init() {
 		// Connect to Solace
 		trace.info("************* Init Called ************");
-		trace.info(System.getenv("VCAP_SERVICES"));
 
-		CloudFactory cloudFactory = new CloudFactory();
-		Cloud cloud = cloudFactory.getCloud();
-		
-		SolaceMessagingInfo solaceMessagingServiceInfo =
-				(SolaceMessagingInfo) cloud.getServiceInfo("solace-messaging-demo-instance");
-		
-		if (solaceMessagingServiceInfo == null) {
-			trace.error("Did not find instance of 'solace-messaging' service");
-			trace.error("************* Aborting Solace initialization!! ************");
-			return;
-		}
-		
-		trace.info("Solace client initializing and using SolaceMessagingInfo: " + solaceMessagingServiceInfo);
-
-		final JCSMPProperties properties = new JCSMPProperties();
-		properties.setProperty(JCSMPProperties.HOST, solaceMessagingServiceInfo.getSmfHost());
-		properties.setProperty(JCSMPProperties.VPN_NAME, solaceMessagingServiceInfo.getMsgVpnName());
-		properties.setProperty(JCSMPProperties.USERNAME, solaceMessagingServiceInfo.getClientUsername());
-		properties.setProperty(JCSMPProperties.PASSWORD, solaceMessagingServiceInfo.getClientPassword());
-		
 		try {
-			session = JCSMPFactory.onlyInstance().createSession(properties);
-			session.connect();
+			session = jcsmpFactory.createSession();
 			
 			clientName = (String)session.getProperty(JCSMPProperties.CLIENT_NAME);
 
